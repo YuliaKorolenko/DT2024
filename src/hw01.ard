@@ -18,16 +18,30 @@
    second' = flip (second 0)
 -}
 
+\func second (_ y _ : Nat): Nat => y
+
+\func apply (f : Nat -> Nat) (x : Nat) =>
+  f x
+
+\func compose (f g : Nat -> Nat) (x : Nat) =>
+  f (g x)
+
+\func flip (f : Nat -> Nat -> Nat) (x y : Nat) =>
+  f y x
+
+\func second' => flip (second 0)
+
 -- 3. Расставьте приоритеты функций f1, f2, f3, f4, f5 и f6 так, чтобы функция test проходила тайпчекинг.
 
 \import lect01 \hiding (+,*)
 
 \func f1 (x y : Nat) => x
 \func f2 : Nat => 0
-\func f3 (f : Nat -> Nat) (z : Nat) : Int => 0
+\func \infixl 1 f3 (f : Nat -> Nat) (z : Nat) : Int => 0
 \func f4 : Nat => 0
-\func f5 => f1
+\func \infixl 2 f5 => f1
 \func f6 => f4
+\func f7 => f1 f2
 
 \func test => f1 f2 f3 f4 f5 f6
 
@@ -38,20 +52,56 @@
    if False _ e = e
 -}
 
+\func if (x y z : Bool) : Bool
+  | true, y, _ => y
+  | false, _, z => z
+
 -- 5. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => {?}
+\func \infixr 2 || (x y : Bool) : Bool =>
+  if (if x y false) true false
 
 -- 6. Определите возведение в степень и факториал для натуральных чисел.
 
 \open Nat \hiding (-,div) -- Здесь лежат + и *.
 
-\func \infixr 8 ^ (x y : Nat) => {?}
+\func \infixr 8 ^ (x y : Nat) => pow 1 x y
+  \where {
+    \func pow (ans x y : Nat) : Nat \elim y
+      | 0 => ans
+      | suc y => pow (* ans x) x y
+  }
 
-\func fac (x : Nat) => {?}
+\func fac (x : Nat) => hlp x x
+  \where {
+    \func hlp (ans x : Nat) : Nat \elim x
+      | 0 => 1
+      | 1 => ans
+      | suc x => hlp (* ans x) x
+  }
 
 -- 7. Определите mod и gcd.
 
-\func mod (x y : Nat) => {?}
+\func mod (x y : Nat): Nat =>  hlper x y y
+  \where {
+    \func hlper (x y fuel : Nat) : Nat \elim x, y, fuel
+      | 0, y, 0 => 0
+      | suc x, y, suc fuel => hlper x y fuel
+      | 0, y1, fuel => y1 - fuel
+      | suc x1, y1, 0 => hlper x1 y1 (y1 - 1)
+  }
 
-\func gcd (x y : Nat) => {?}
+\func max (x y : Nat) : Nat =>
+  if' (< x  y) y x
+
+\func min (x y : Nat) : Nat =>
+  if' (< x  y) x y
+
+\func gcd (x y : Nat) : Nat =>  gcdfuel x y ((max x y) + 1)
+  \where {
+    \func gcdfuel (x y fuel : Nat) : Nat
+      | x, 0, suc fuel => x
+      | x, y, 0 => 0
+      | x, y, suc fuel => gcdfuel (min x y) (mod x y) fuel
+  }
+
