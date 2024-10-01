@@ -70,9 +70,6 @@
 -- 6. Определите конгруэнтность для функций двух аргументов через transport.
 --    Можно использовать любые функции, определенные через transport.
 
---\func pmap' {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a'
---  => transport (\lam x => f a = f x) p idp
-
 \func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' =>
   transport (\lam k => f a b = f a' k) q (transport (\lam x => f a b = f x b) p idp)
 
