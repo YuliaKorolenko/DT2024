@@ -1,22 +1,27 @@
 \import Data.Maybe
 \import Logic
+\import Meta
+\import Paths
 \import Paths.Meta
 \import hw01 (gcd)
 \import lect07
-\open Nat(+)
+\open Nat (+)
 
 -- 1. Определите функцию swap несколькими способами.
 
 -- При помощи \cowith и доступа к полям.
+
 \func swap {A B : \Type} (p : Pair A B) : Pair B A \cowith
   | fst_ => p.snd_
   | snd_ => p.fst_
 
 -- При помощи \new и паттерн матчинга.
+
 \func swap' {A B : \Type} (p : Pair A B) : Pair B A \elim p
   | (a,b) => \new Pair B A b a
 
 -- При помощи \new и доступа к полям.
+
 \func swap'' {A B : \Type} (p : Pair A B) : Pair B A => \new Pair {
   | fst_ => p.snd_
   | snd_ => p.fst_
@@ -28,7 +33,8 @@
 
 -- 3. Докажите, что тип PosNat 0 пустой, а тип PosNat 1 нет.
 
-\func zero-isNotPos (p : PosNat 0) : Empty => \case p.p \with {}
+\func zero-isNotPos (p : PosNat 0) : Empty => \case p.p \with {
+}
 
 \func one-isPos : PosNat 1 \cowith
   | p => ()
@@ -59,17 +65,52 @@
 -- 6. Определите \instance Monad для Maybe.
 
 \instance MaybeMonad : Monad Maybe
-  | return => {?}
-  | >>= el f => {?}
+  | return x => just x
+  | >>= el f => \case el \with {
+    | nothing => nothing
+    | just a => f a
+  }
   | left-identity el f => idp
-  | right-identity m => {?}
-  | associativity el fa fb => {?}
-
+  | right-identity m => cases m \with {
+    | nothing => idp
+    | just a => idp
+  }
+  | associativity el fa fb => cases el \with {
+    | nothing => idp
+    | just a => idp
+  }
 
 -- 7. Определите \instance Monad для State и State'.
 
 \record State (S A : \Type)
   | state : S -> \Sigma S A
 
+\instance StateMonad (S : \Set): Monad (State S)
+  | return el => \new State {
+    | state => \lam s => (s,el)
+  }
+  | >>= el f => \new State {
+    | state => \lam s =>  ((state {f (state {el} s).2} (state {el} s).1).1,
+                           (state {f (state {el} s).2} (state {el} s).1).2)
+  }
+  | left-identity el f => idp
+  | right-identity f => idp
+  | associativity el f1 f2 => idp
+
 \data State' (S A : \Type)
   | state' (S -> \Sigma S A)
+
+\instance State'Monad (S : \Set): Monad (State' S)
+  | return el => state' (\lam s => (s, el))
+  | >>= (state' f1) f => state' (\lam s => cases (f (f1 s).2) \with {
+    | state' _x => _x s
+  })
+  | left-identity el f => cases (f el) \with {
+    | state' _x => idp
+  }
+  | right-identity m => \case \elim m \with {
+    | state' _x => path(\lam i => state' {?})
+  }
+  | associativity el f1 f2 => \case \elim el \with {
+    | state' _x => {?}
+  }
