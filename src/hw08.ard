@@ -1,5 +1,9 @@
+\import Arith.Nat
 \import Data.Bool
 \import Data.List \hiding (headDef)
+\import Meta
+\import Paths
+\import Paths.Meta
 \import hw06
 \import lect08
 \import Order.LinearOrder
@@ -10,15 +14,71 @@
 --    * Все элементы filter p xs удовлетворяют предикату p
 --    * Любой подсписок xs с тем же свойством является подсписком filter p xs
 
+\func filter {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | :: x xs => \case p x \with {
+    | true => x :: filter p xs
+    | false => filter p xs
+  }
+-- Sublist from hw.06
+
+\func filter_sublist_x {A : \Type} (p : A -> Bool) (xs : List A) : Sublist (filter p xs) xs \elim xs
+  | nil => empty
+  | a :: xs => cases (p a) \with {
+    | false => seqintail (filter_sublist_x p xs)
+    | true => headseq idp (filter_sublist_x p xs)
+  }
+
+\data All_P  {A : \Type} (p : A -> Bool) (xs : List A) \with
+  | p, List.nil => all-nil
+  | p, a List.:: tail => step-all (p a = true) (All_P p tail)
+
+\func all_after_filter {A : \Type} (p : A -> Bool) (xs : List A) : All_P p (filter p xs) \elim xs
+  | nil => all-nil
+  | a :: xs => cases (p a arg addPath) \with {
+    | false, eq => all_after_filter p xs
+    | true, eq => step-all eq (all_after_filter p xs)
+  }
+
+\func ys_sub_all_p {A : \Type} (p : A -> Bool) (ys xs : List A) (rule1 : Sublist ys xs) (rule2 : All_P p ys) :  Sublist ys (filter p xs)
+  \elim ys, xs, rule1, rule2
+    | nil, _, _, _ => empty
+    | x :: ys, y :: xs, headseq p1 rule1, step-all p2 rule2 => cases (p y arg addPath) \with {
+      | false, neq => \let
+                      | py_eq => rewrite p1 p2
+                      | true==false => rewrite py_eq neq
+                      \in \case true/=false true==false
+      | true, p3 => headseq p1 (ys_sub_all_p p ys xs rule1 rule2)
+    }
+    | y :: ys, x :: xs, seqintail rule1', step-all p1 rule2' => cases (p x arg addPath) \with {
+      | false, n_eq => ys_sub_all_p p (y :: ys) xs rule1' (step-all p1 rule2')
+      | true, eq => seqintail (ys_sub_all_p p (y :: ys) xs rule1' (step-all p1 rule2'))
+    }
+
 -- 2. Докажите, что Perm l1 l2 тогда и только тогда, когда Insertion.sort l1 = Insertion.sort l2.
+
+\func perm_iff_sort_eq {A : Dec} {l1 l2 : List A} : Perm l1 l2 <-> (Insertion.sort l1 = Insertion.sort l2) => {?}
 
 -- 3. Докажите, что спецификация "результат является перестановкой входа и отсортирован" является полной для функции sort.
 
-\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l
-  => {?}
+\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l =>
+  {?}
 
 -- 4. Определите факториал через хвостовую рекурсию.
 --    Докажите, что он равен обычному определению факториала.
+
+\func fac (x : Nat) : Nat \elim x
+  | 0 => 1
+  | suc x => suc x Nat.* fac x
+
+\func factorialTailRec (n : Nat) : Nat => helperRec n 1
+    \where {
+      \func helperRec (n' : Nat) (acc : Nat) : Nat \elim n'
+        | 0 => acc
+        | suc n'' => helperRec n'' (acc Nat.* suc n'')
+    }
+
+\func fac-eq (n : Nat) : factorialTailRec n = fac n => {?}
 
 -- 5. Определите функцию, которая проверяет правильность скобочной последовательности.
 --    Докажите ее корректность.
