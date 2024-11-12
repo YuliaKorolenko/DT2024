@@ -78,7 +78,25 @@
         | suc n'' => helperRec n'' (acc Nat.* suc n'')
     }
 
-\func fac-eq (n : Nat) : factorialTailRec n = fac n => {?}
+\func fac-eq (n : Nat) : factorialTailRec n = fac n \elim n
+  | 0 => idp
+  | suc n => rewrite (helper (suc n) 1)
+             (rewrite (inv NatSemiring.*-assoc)
+             (rewrite NatSemiring.ide-left idp))
+
+-- factorialTailRec (suc n) = suc n * fac n
+-- factorialTailRec (suc n) = factorialTailRec.helperRec n (suc n)
+-- 1 * (suc n * fac n) = suc n * fac n
+--  suc (1 Nat.* n) Nat.* fac n = suc n Nat.* fac n
+-- ide-left {n : Nat} : 1 * n = n
+
+\func helper (n acc : Nat) : factorialTailRec.helperRec n acc = acc Nat.* fac n \elim n, acc
+  | 0, _ => idp
+  | suc n, acc => rewrite helper (rewriteI NatSemiring.*-assoc idp)
+
+-- factorialTailRec.helperRec n (acc Nat.* n Nat.+ acc) = acc Nat.* (suc n Nat.* fac n)
+--  (acc * n + acc) * fac n = acc * (suc n * fac n)
+--  (n * m) * k = n * (m * k)
 
 -- 5. Определите функцию, которая проверяет правильность скобочной последовательности.
 --    Докажите ее корректность.
