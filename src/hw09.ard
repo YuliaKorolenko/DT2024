@@ -1,28 +1,74 @@
 \import Data.Maybe
-\import lect06 (Decide)
+\import Function.Meta
+\import Meta
+\import hw06
+\import lect06 (Decide, no, yes)
 \import lect09
 
 -- 1. Определите отношение многошаговой редукции на Term.
 
-\func Red {V : \Set} (t s : Term V) : \Type => {?}
+\func Red {V : \Set} (t s : Term V) : \Type => ReflTransClosure Red1 t s
 
 -- 2. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
 --    Определите любую стратегию редукции.
 
-\func strategy {V : \Set} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s)) => {?}
+\func helpStrategy {V : \Set} (t1 t2 : Term V) (t1_res : Decide (\Sigma (s' : Term V) (Red1 t1 s')))
+  : Decide (\Sigma (s : Term V) (Red1 (app t1 t2) s)) \elim t1_res
+  | yes a => yes (app a.1 t2, app-left a.2 idp)
+  | no n => \case (strategy t2) \with {
+    | yes a => yes (app t1 a.1, app-right idp a.2)
+    | no n1 => \case \elim t1 \with {
+      | var v => no ({?})
+      | app t t3 => no {?}
+      | lam t => yes (t >>= maybe t2 var, beta idp idp)
+      | unit => no {?}
+    }
+  }
+
+\func strategy {V : \Set} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s)) \elim t
+  | var v => no (\lam x => \case x.2)
+  | app t1 t2 => helpStrategy t1 t2 (strategy t1)
+  | lam t => \case (strategy t) \with {
+    | yes a => yes (lam a.1, red-lam a.2)
+    | no n => no (\lam _x => \case _x \with {
+      | (var v,r) => \case r
+      | (app t1 t2,r) => \case r
+      | (lam t1, red-lam r) => n (t1, r)
+      | (unit,r) => \case r
+    })
+  }
+  | unit => no (\lam x => \case x.2)
+
+-- F A -> (A -> F B) -> F B
 
 -- 3. Докажите, что подтермы достижимого терма достижимы.
 
 \func appAccLeft {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 t
-  => {?}
+\elim a
+  | acc _x => acc (\lam {a'} r =>
+      \let
+        | a's => app a' s
+      \in appAccLeft (_x {a's} (app-left r idp)))
 
 \func appAccRight {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 s
-  => {?}
+\elim a
+  | acc _x => acc (\lam {a'} r =>
+      \let
+        | a't => app t a'
+        | newel => _x {a't} (app-right idp r)
+      \in appAccRight (_x {a't} (app-right idp r)))
 
-\func subLamAcc {V : \Set} {t : Term (Maybe V)} (a : Acc Red1 (lam t)) : Acc Red1 t
-  => {?}
+-- a : Acc Red1 (app t a') -> Acc Red1 a'
+-- нужен Acc Red1 (app t a')
+-- Red1 (app t s) (app t a') -> Acc Red1 (app t a')
+
+\func subLamAcc {V : \Set} {t : Term (Maybe V)} (a : Acc Red1 (lam t)) : Acc Red1 t \elim a
+  | acc _x => acc (\lam {a'} r =>
+      \let
+        | lama => lam a'
+        | redlm => red-lam r
+      \in subLamAcc $ _x {lama} redlm)
 
 -- 4. Определите функцию, которая по достижимому терму возвращает длину максимальной цепочки редукций из него.
 
-\func red-length {V : \Set} (t : Term V) (acc : Acc Red1 t) : Nat
-  => {?}
+\func red-length {V : \Set} (t : Term V) (acc : Acc Red1 t) : Nat => {?}

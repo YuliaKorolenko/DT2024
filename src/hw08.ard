@@ -1,6 +1,7 @@
 \import Arith.Nat
 \import Data.Bool
 \import Data.List \hiding (headDef)
+\import Function.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -104,7 +105,19 @@
 \data Paren | Left | Right
 
 \func isBalanced (xs : List Paren) : Bool
-  => {?}
+  => helperIsBalanced xs 0
+
+\func helperIsBalanced (xs : List Paren) (open : Nat) : Bool \elim xs, open
+  | nil, 0 => true
+  | nil, suc open => false -- остались открытые скобки
+  | x :: xs, 0 => \case x \with {
+    | Left => helperIsBalanced xs 1
+    | Right => false
+  }
+  | x :: xs, suc open => \case x \with {
+    | Left => helperIsBalanced xs (suc $ suc open)
+    | Right => helperIsBalanced xs open
+  }
 
 \data Balanced (xs : List Paren) \with
   | nil => nil-balanced
