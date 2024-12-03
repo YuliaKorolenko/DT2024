@@ -12,22 +12,30 @@
 -- 2. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
 --    Определите любую стратегию редукции.
 
-\func helpStrategy {V : \Set} (t1 t2 : Term V) (t1_res : Decide (\Sigma (s' : Term V) (Red1 t1 s')))
+\func helpStrategyWithLambda {V : \Set} (t1 t2 : Term V) (t1_res : Decide (\Sigma (s' : Term V) (Red1 t1 s')))
   : Decide (\Sigma (s : Term V) (Red1 (app t1 t2) s)) \elim t1_res
   | yes a => yes (app a.1 t2, app-left a.2 idp)
   | no n => \case (strategy t2) \with {
     | yes a => yes (app t1 a.1, app-right idp a.2)
-    | no n1 => \case \elim t1 \with {
-      | var v => no ({?})
-      | app t t3 => no {?}
-      | lam t => yes (t >>= maybe t2 var, beta idp idp)
-      | unit => no {?}
+    | no n1 => \case decideLambda t1 \with {
+      | yes (a_1, a_2) => yes (a_1 >>= maybe t2 var, beta a_2 idp)
+      | no n2 => no (\lam (s, r) => cases (s, r) \with {
+        | x, beta p p1 => n2 (_, p)
+        | app x x1, app-left x2 p => n (x, x2)
+        | app x x1, app-right p x2 => n1 (x1, x2)
+      })
     }
   }
 
+\func decideLambda {V : \Set} (t : Term V) : Decide (\Sigma  (s : Term (Maybe V)) (t = lam s)) \elim t
+  | var v => no (\lam _x => \case _x.2)
+  | app t1 t2 => no (\lam _x => \case _x.2)
+  | lam t1 => yes (t1, idp)
+  | unit => no (\lam _x => \case _x.2)
+
 \func strategy {V : \Set} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s)) \elim t
   | var v => no (\lam x => \case x.2)
-  | app t1 t2 => helpStrategy t1 t2 (strategy t1)
+  | app t1 t2 => helpStrategyWithLambda t1 t2 (strategy t1)
   | lam t => \case (strategy t) \with {
     | yes a => yes (lam a.1, red-lam a.2)
     | no n => no (\lam _x => \case _x \with {
