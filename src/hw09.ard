@@ -37,11 +37,11 @@
   | var v => no (\lam x => \case x.2)
   | app t1 t2 => helpStrategyWithLambda t1 t2 (strategy t1)
   | lam t => \case (strategy t) \with {
-    | yes a => yes (lam a.1, red-lam a.2)
+    | yes a => yes (lam a.1, lam-red a.2)
     | no n => no (\lam _x => \case _x \with {
       | (var v,r) => \case r
       | (app t1 t2,r) => \case r
-      | (lam t1, red-lam r) => n (t1, r)
+      | (lam t1, lam-red r) => n (t1, r)
       | (unit,r) => \case r
     })
   }
@@ -74,9 +74,36 @@
   | acc _x => acc (\lam {a'} r =>
       \let
         | lama => lam a'
-        | redlm => red-lam r
+        | redlm => lam-red r
       \in subLamAcc $ _x {lama} redlm)
 
 -- 4. Определите функцию, которая по достижимому терму возвращает длину максимальной цепочки редукций из него.
 
-\func red-length {V : \Set} (t : Term V) (acc : Acc Red1 t) : Nat => {?}
+\func red-length {V : \Set} (t : Term V) (acc : Acc Red1 t) : Nat
+  => {?}
+
+-- 5. Докажите, что нейтральные термы замкнуты относительно редукций.
+
+\func neutralRed {V : \Set} {t s : Term V} (r : Red1 t s) (n : Neutral t) : Neutral s
+  => {?}
+
+-- 6. Докажите следующую обобщенную лемму о подстановке и выведите из нее обычную версию: если Г, x : A |- b : B и Г |- a : A, то Г |- b[a/x] : B.
+
+\func substLem {U V : \Set} (ctx : U -> Type) (b : Term U) (B : Type) (h : hasType ctx b B)
+               (ctx' : V -> Type) (a : U -> Term V) (h' : \Pi (u : U) -> hasType ctx' (a u) (ctx u))
+  : hasType ctx' (b >>= a) B
+  => {?}
+
+\func substLem1 => {?}
+
+-- 7. Докажите, что если Г |- a : A и Red a a', то Г |- a' : A
+
+\func redLem {V : \Set} {ctx : V -> Type} {a a' : Term V} (r : Red a a') {A : Type} (h : hasType ctx a A)
+  : hasType ctx a' A
+  => {?}
+
+-- Optional
+-- 8. Для доказательства typeableInterp понадобится вспомогательное утверждение. Докажите его.
+
+\func redInterp {V : \Set} {a t s : Term V} {T : Type} (r : HeadRed a t s) (acc : Acc Red1 a) (q : Interp T s) : Interp T t
+  => {?}

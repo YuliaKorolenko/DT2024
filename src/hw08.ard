@@ -99,24 +99,20 @@
 --  (acc * n + acc) * fac n = acc * (suc n * fac n)
 --  (n * m) * k = n * (m * k)
 
--- 5. Определите функцию, которая проверяет правильность скобочной последовательности.
+-- 5. Функция isBalanced проверяет правильность скобочной последовательности.
 --    Докажите ее корректность.
 
 \data Paren | Left | Right
 
 \func isBalanced (xs : List Paren) : Bool
-  => helperIsBalanced xs 0
-
-\func helperIsBalanced (xs : List Paren) (open : Nat) : Bool \elim xs, open
-  | nil, 0 => true
-  | nil, suc open => false -- остались открытые скобки
-  | x :: xs, 0 => \case x \with {
-    | Left => helperIsBalanced xs 1
-    | Right => false
-  }
-  | x :: xs, suc open => \case x \with {
-    | Left => helperIsBalanced xs (suc $ suc open)
-    | Right => helperIsBalanced xs open
+  => aux xs 0
+  \where {
+    \func aux (xs : List Paren) (p : Nat) : Bool \elim xs, p
+      | nil, 0 => true
+      | nil, suc _ => false
+      | Left :: xs, p => aux xs (suc p)
+      | Right :: xs, 0 => false
+      | Right :: xs, suc p => aux xs p
   }
 
 \data Balanced (xs : List Paren) \with
