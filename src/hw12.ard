@@ -1,15 +1,39 @@
+\import Function.Meta
 \import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
 \import lect12
 
 -- 1. Определите функцию negPred : Int -> Int такую, что negPred x = x, если x > 0, и negPred x = x - 1, если x <= 0.
 
-\func negPred (x : Int) : Int => {?}
+\func negPred (x : Int) : Int \elim x
+  | pos zero => neg 1
+  | pos n => n
+  | neg n => neg (suc n)
 
 -- 2. Определите функции сложения и умножения для Int.
 
-\func \infixl 6 + (x y : Int) : Int => {?}
+\func \infixl 6 + (x y : Int) : Int \elim x, y
+  | 0, neg n => neg n
+  | neg x', 0 => neg x'
+  | neg (suc x'), neg 0 => neg (suc x')
+  | pos x', pos y' => pos (Nat.+ x' y')
+  | pos (suc x'), neg (suc y') => + (pos x') (neg y')
+  | neg (suc x'), pos (suc y') => + (neg x') (pos y')
+  | neg (suc x'), neg (suc y') => neg (suc (suc (Nat.+ x' y')))
 
-\func \infixl 7 * (x y : Int) : Int => {?}
+\func \infixl 7 * (x y : Int) : Int \elim x, y
+  | pos (suc n'''), pos (suc n1''') => pos (Nat.* (suc n''') (suc n1'''))
+  | pos (suc n''), neg (suc n1'') => neg (Nat.* (suc n'') (suc n1''))
+  | neg (suc n), pos (suc n1) => neg (Nat.* (suc n) (suc n1))
+  | neg (suc n), neg (suc n1) => pos (Nat.* (suc n) (suc n1))
+  | 0, y => 0
+  | pos (suc n'''), 0 => 0
+  | pos (suc n'''), neg 0 => 0
+  | neg 0, y => 0
+  | neg (suc n), 0 => 0
+  | neg (suc n), neg 0 => 0
 
 -- 3. Определите тип данных BinNat для бинарных натуральных чисел.
 --    У него должно быть три конструктора: для 0, для чисел вида 2*n и чисел вида 2*n+1.
@@ -17,6 +41,9 @@
 --    Используйте типы данных с условиями, чтобы вычислительно отождествить различные нули.
 
 \data BinNat
+  | bin_zero
+  | even BinNat \with { bin_zero => bin_zero }
+  | odd BinNat \with { bin_zero => bin_zero }
 
 -- 4. Докажите, что функция pred сюръективна.
 
@@ -24,11 +51,16 @@
   | 0 => 0
   | suc n => n
 
-\func pred-is-sur : isSur pred => {?}
+\func pred-is-sur : isSur pred => \lam b => cases b \with {
+  | 0 => inP (0, idp)
+  | n => inP (suc n, idp)
+}
 
 -- 5. Докажите, что функция suc не сюръективна.
 
-\func suc-is-not-sur (p : isSur suc) : Empty => {?}
+\func suc-is-not-sur (p : isSur suc) : Empty => \case p 0 \with {
+  | inP a => \case a.2
+}
 
 -- 6. Пусть f : A -> B и g : B -> C ─ некоторые функции.
 --    Докажите, что если f и g сюръективны, то g `o` f также сюръективна.
@@ -36,9 +68,23 @@
 
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f) => {?}
+\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f) =>
+  \lam c =>
+      \let
+        | qb_c => q c
+      \in \case qb_c \with {
+        | inP sig_gb_c =>
+          \let
+            | fa_b => p sig_gb_c.1
+          \in \case fa_b \with {
+            | inP sig_fa_b => inP (sig_fa_b.1, unfold o (rewrite sig_fa_b.2 $ rewrite sig_gb_c.2 idp))
+          }
+      }
 
-\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g => {?}
+\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g =>
+  \lam c => \case p c \with {
+    | inP a => inP (f a.1, a.2)
+  }
 
 -- 7. Определите множество конечных подмножеств множества A, то есть списков элементов A с точностью до перестановок и повторений элементов.
 
@@ -55,11 +101,9 @@
 -- Формально утверждение теоремы Кантора состоит из двух частей:
 -- "существует инъекция из A в Subs A" и "не существует сюръекции из A в Subs A".
 
-\func cantor1 (A : \Set) : \Sigma (f : A -> Subs A) (isInj f)
-  => {?}
+\func cantor1 (A : \Set) : \Sigma (f : A -> Subs A) (isInj f) => {?}
 
-\func cantor2 (A : \Set) (f : A -> Subs A) (p : isSur f) : Empty
-  => {?}
+\func cantor2 (A : \Set) (f : A -> Subs A) (p : isSur f) : Empty => {?}
 
 -- Optional
 -- 9. Постройте функции Nat -> BinNat и BinNat -> Nat и докажите, что они взаимно обратны.
@@ -74,5 +118,4 @@
 
 -- 10. Докажите, что wind инъективна.
 
-\func wind-inj {x y : Int} (p : wind x = wind y) : x = y
-  => {?}
+\func wind-inj {x y : Int} (p : wind x = wind y) : x = y => {?}
