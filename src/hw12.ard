@@ -42,8 +42,8 @@
 
 \data BinNat
   | bin_zero
-  | even BinNat \with { bin_zero => bin_zero }
-  | odd BinNat \with { bin_zero => bin_zero }
+  | _2*n BinNat \with { bin_zero => bin_zero }
+  | _2*n+1 BinNat
 
 -- 4. Докажите, что функция pred сюръективна.
 
@@ -101,16 +101,32 @@
 -- Формально утверждение теоремы Кантора состоит из двух частей:
 -- "существует инъекция из A в Subs A" и "не существует сюръекции из A в Subs A".
 
-\func cantor1 (A : \Set) : \Sigma (f : A -> Subs A) (isInj f) => {?}
+\func cantor1 (A : \Set) : \Sigma (f' : A -> Subs A) (isInj f') => (\lam a a1 => a = a1, unfold =-isInj)
 
 \func cantor2 (A : \Set) (f : A -> Subs A) (p : isSur f) : Empty => {?}
+
 
 -- Optional
 -- 9. Постройте функции Nat -> BinNat и BinNat -> Nat и докажите, что они взаимно обратны.
 
-\func NatToBinNat (n : Nat) : BinNat => {?}
+\func NatToBinNat (n : Nat) : BinNat \elim n
+  | 0 => bin_zero
+  | suc n => helper (NatToBinNat n)
 
-\func BinNatToNat (b : BinNat) : Nat => {?}
+\func helper (k : BinNat) : BinNat \elim k
+  | bin_zero => _2*n+1 bin_zero
+  | _2*n k => _2*n+1 k
+  | _2*n+1 k => _2*n $ helper k
+
+--    0       0: bin_zero
+--    1      1: *2+1 bin_zero
+--   10      2: *2 *2+1 bin_zero
+--   11      3: *2+1 *2+1 bin_zero
+
+\func BinNatToNat (b : BinNat) : Nat \elim b
+  | bin_zero => 0
+  | _2*n b => 2 Nat.* BinNatToNat b
+  | _2*n+1 b => 1 Nat.+ (2 Nat.* BinNatToNat b)
 
 \func nbn (n : Nat) : BinNatToNat (NatToBinNat n) = n => {?}
 
