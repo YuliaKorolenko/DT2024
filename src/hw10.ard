@@ -5,7 +5,7 @@
 \import Meta
 \import Paths.Meta
 \import hw05
-\import lect06 (Decide)
+\import lect06 (Decide, no, yes)
 \import lect10
 
 -- 1. Пусть f : A -> B и g : B -> C ─ некоторые функции.
@@ -85,7 +85,12 @@
   | 0, m => z<=n
   | suc n, suc m => s<=s (LessOrEq n m)
 
-\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => {?}
+\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) =>
+  \lam x y => helperLessOrEq-isProp {n} {m} x y
+
+\func helperLessOrEq-isProp {n m : Nat} (x y : LessOrEq n m) : x = y \elim n, m, x, y
+  | 0, m, z<=n, z<=n => idp
+  | suc n, suc m, s<=s x, s<=s y => pmap s<=s (helperLessOrEq-isProp {n} {m} x y)
 
 -- 6. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 
@@ -98,13 +103,40 @@
   | refl (x = y)
   | inc (R x y)
 
-\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => So (x < y)) n m) => {?}
+\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => So (x < y)) n m) =>
+  \lam x y => \case \elim x, \elim y \with {
+    | refl p, refl p1 => pmap refl $ ext
+    | refl p, inc r => \case helper<-isProp {n} {m} r p
+    | inc r, refl p => \case helper<-isProp {n} {m} r p
+    | inc r, inc r1 => pmap inc $ ext
+  }
 
-\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty => {?}
+\func helper<-isProp {n m : Nat} (r : So (n < m)) (p : n = m) : Empty \elim n, m
+  | 0, 0 => r
+  | 0, suc m => \case p
+  | suc n, 0 => r
+  | suc n', suc m' =>
+    \let
+      n'=m' : n' = m' => pmap (\lam n => \case n \with {
+        | 0 => 0
+        | suc n1 => n1
+      }) p
+    \in helper<-isProp {n'} {m'} r n'=m'
+
+\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty =>
+  \let
+    | p00 => p 0 0
+    | refl=inc => p00 (refl idp) (inc z<=n)
+  \in \case refl=inc \with {
+  }
 
 -- 7. Докажите, что если тип A вкладывается в тип B и B является утверждением, то и A является утверждением.
 
-\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => {?}
+\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => \lam x y =>
+    \let
+      | unfoldp => unfold isInj p
+      | unfoldq => unfold isProp q
+    \in unfoldp $ unfoldq (f x) (f y)
 
 -- 8. Докажите, что тип с разрешимым равенством являетя множеством.
 
