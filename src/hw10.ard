@@ -140,7 +140,24 @@
 
 -- 8. Докажите, что тип с разрешимым равенством являетя множеством.
 
-\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A => {?}
+\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A =>
+  setLem {A}
+      (\lam a a1 => \case dec a a1 \with {
+        | yes a2 => \Sigma
+        | no n => Empty
+      })
+      (\lam x y => mcases \with {
+        | yes a2 => Unit-isProp
+        | no n => Empty-isProp
+      })
+      (\lam a => mcases \with {
+        | yes a2 => ()
+        | no n => \case n idp
+      })
+      (\lam {a} {a'} => mcases \with {
+        | yes a2 => \lam _x => a2
+        | no n => \lam _x => \case _x
+      })
 
 -- 9. Если A и B являются множествами, то A `Or` B тоже является множеством.
 
@@ -148,12 +165,68 @@
   | inl A
   | inr B
 
-\func or-isSet {A B : \Type} (p : isSet A) (q : isSet B) : isSet (Or A B) => {?}
+\func or-isSet {A B : \Type} (p : isSet A) (q : isSet B) : isSet (Or A B) => setLem {Or A B}
+    (\lam o o1 => \case \elim o, \elim o1 \with {
+      | inl a, inl a1 => a = a1
+      | inl a, inr b => Empty
+      | inr b, inl a => Empty
+      | inr b, inr b1 => b = b1
+    })
+    (\lam x y => mcases \with {
+      | inl a, inl a1 => p a a1
+      | inl a, inr b => Empty-isProp
+      | inr b, inl a => Empty-isProp
+      | inr b, inr b1 => q b b1
+    } )
+    (\lam a => cases a \with {
+      | inl a1 => idp
+      | inr b => idp
+    })
+    (\lam {a} {a'} => mcases \with {
+      | inl a1, inl a2 => \lam _x => rewrite _x idp
+      | inl a1, inr b => \lam _x => \case _x
+      | inr b, inl a1 => \lam _x => \case _x
+      | inr b, inr b1 => \lam _x => rewrite _x idp
+    })
 
 -- 10. Если B x является множеством, то \Pi (x : A) -> B x тоже является множеством.
 
-\func pi-isSet {A : \Type} (B : A -> \Type) (p : \Pi (x : A) -> isSet (B x)) : isSet (\Pi (x : A) -> B x) => {?}
+\func pi-isSet {A : \Type} (B : A -> \Type) (p : \Pi (x : A) -> isSet (B x)) : isSet (\Pi (x : A) -> B x) =>
+  setLem {\Pi (x : A) -> B x}
+      (\lam f1 f2 => \Pi (x : A) -> f1 x = f2 x)
+      (\lam x y => {?})
+      (\lam a x => idp)
+      (\lam {a} {a'} a_x=a'x => ext (\lam x => a_x=a'x x))
 
 -- 11. Докажите, что если A является множеством, то List A также им является.
 
-\func List-isSet {A : \Type} (pA : isSet A) : isSet (List A) => {?}
+\func helperListRule {A : \Type} (l1 l2 : List A) : \Type \elim l1, l2
+  | nil, nil => \Sigma
+  | nil, a :: l2 => Empty
+  | a :: l1, nil => Empty
+  | a :: l1, a1 :: l2 => \Sigma (a = a1) (helperListRule l1 l2)
+
+\func helperListEq {A : \Type} (l1 l2 : List A) (h : helperListRule l1 l2) : l1 = l2 \elim l1, l2, h
+  | nil, nil, h => idp
+  | x1 :: x2, y1 :: y2, h => rewrite h.1 $ pmap (:: y1) (helperListEq {A} x2 y2 h.2)
+
+\func helperLista=a {A : \Type} (a : List A) : helperListRule a a
+\elim a
+  | nil => ()
+  | a1 :: a2 => (idp, helperLista=a {A} a2)
+
+\func helperListIsProp {A : \Type} (x y : List A) (pA : isSet A): isProp (helperListRule x y) \elim x, y
+  | nil, nil => Unit-isProp
+  | nil, a :: y => Empty-isProp
+  | a :: x, nil => Empty-isProp
+  | x1 :: x2, y1 :: y2 =>
+    \let
+      | isEqProp : isProp (x1 = y1) => pA x1 y1
+      | isPropx2y2 : isProp (helperListRule x2 y2) => helperListIsProp x2 y2 pA
+    \in Sigma-isProp isEqProp isPropx2y2
+
+\func List-isSet {A : \Type} (pA : isSet A) : isSet (List A) => setLem {List A}
+    (\lam l1 l2 => helperListRule l1 l2)
+    (\lam l1 l2 => helperListIsProp l1 l2 pA)
+    (\lam a => helperLista=a {A} a)
+    (\lam {l1} {l2} h => helperListEq l1 l2 h)
